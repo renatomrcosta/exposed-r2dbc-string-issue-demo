@@ -6,8 +6,6 @@ This repo creates a "test" on the main root that starts a testcontainer, migrate
 
 This app can be executed with the following command. Needs a docker daemon running:
 
-
-
 ```shell
 ./gradlew run
 ```
@@ -16,7 +14,11 @@ This app can be executed with the following command. Needs a docker daemon runni
 
 `exposed-r2dbc`'s `PrimitiveTypeMapper` lists `StringColumnType` in its `columnTypes` but does not handle the null case for it — the `when` in `setValue` has no `is StringColumnType` arm. The binding therefore falls through to `DefaultTypeMapper`, which on PostgreSQL calls `statement.bindNull(index, Object::class.java)`. `r2dbc-postgresql`'s `DefaultCodecs.encodeNull` rejects `Object` and throws.
 
-`EnumerationNameColumnType` has the same fate but earlier in the pipeline: it isn't in any registered mapper's `columnTypes`, so it goes straight to `DefaultTypeMapper`.
+I've tested my changes using a locally published version of exposed, and the string tests succeed:
+
+![img.png](img.png)
+
+`EnumerationNameColumnType` has the same issue, but I'm not certain it would be best to treat this as a "Primitive Type". My fix for the primitive type mapper does not cover this enumeration type yet;
 
 ### Stack trace sample
 ```
@@ -32,4 +34,4 @@ Caused by: java.lang.IllegalArgumentException: Cannot encode null parameter of t
 
 ### Observations
 
-This issue already does not exist in the latest 1.1.1.RELEASE of the Postgres-R2DBC Driver. However, it seems also reasonable to tackle the cascading in the Exposed library as well, to ensure that nullable values are handled consistently across different database drivers and platforms.
+This issue already does not exist in the latest 1.1.1.RELEASE of the Postgres-R2DBC Driver. It seems there was a defensive change when handling null object types; However, it seems also reasonable to tackle the cascading in the Exposed library as well, to ensure that nullable values are handled consistently across different database drivers and platforms.
